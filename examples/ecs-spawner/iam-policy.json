@@ -1,0 +1,45 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "ListAndDescribeOwnTasks",
+      "Effect": "Allow",
+      "Action": [
+        "ecs:ListTasks",
+        "ecs:DescribeTasks"
+      ],
+      "Resource": "*",
+      "Condition": {
+        "ArnEquals": {
+          "ecs:cluster": "REPLACE_ME_WITH_CLUSTER_ARN"
+        }
+      }
+    },
+    {
+      "Sid": "RunAndStopJobNodeTasks",
+      "Effect": "Allow",
+      "Action": [
+        "ecs:RunTask",
+        "ecs:StopTask"
+      ],
+      "Resource": [
+        "arn:aws:ecs:REPLACE_REGION:REPLACE_ACCOUNT:task-definition/asserts-jobnode:*",
+        "arn:aws:ecs:REPLACE_REGION:REPLACE_ACCOUNT:task/REPLACE_CLUSTER_NAME/*"
+      ],
+      "Condition": {
+        "ArnEquals": {
+          "ecs:cluster": "REPLACE_ME_WITH_CLUSTER_ARN"
+        }
+      }
+    },
+    {
+      "Sid": "PassExecutionAndTaskRoles",
+      "Effect": "Allow",
+      "Action": "iam:PassRole",
+      "Resource": [
+        "REPLACE_ME_WITH_EXECUTION_ROLE_ARN",
+        "REPLACE_ME_WITH_TASK_ROLE_ARN"
+      ]
+    }
+  ]
+}

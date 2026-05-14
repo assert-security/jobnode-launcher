@@ -1,0 +1,46 @@
+{
+  "family": "asserts-jobnode",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "1024",
+  "memory": "4096",
+  "runtimePlatform": {
+    "operatingSystemFamily": "LINUX",
+    "cpuArchitecture": "ARM64"
+  },
+  "executionRoleArn": "REPLACE_ME_WITH_EXECUTION_ROLE_ARN",
+  "taskRoleArn": "REPLACE_ME_WITH_TASK_ROLE_ARN",
+  "containerDefinitions": [
+    {
+      "name": "jobnode",
+      "image": "REPLACE_ME_WITH_ECR_OR_REGISTRY_IMAGE",
+      "essential": true,
+      "linuxParameters": {
+        "initProcessEnabled": true
+      },
+      "environment": [
+        { "name": "VENARI_MASTER_URL",        "value": "REPLACE_ME_WITH_TENANT_MASTER_URL" },
+        { "name": "VENARI_JOBNODE_CLIENT_ID", "value": "REPLACE_ME_WITH_OAUTH_CLIENT_ID" },
+        { "name": "VENARI_JOBNODE_SCOPE",     "value": "REPLACE_ME_WITH_OAUTH_SCOPE" }
+      ],
+      "secrets": [
+        {
+          "name": "VENARI_JOBNODE_CLIENT_SECRET",
+          "valueFrom": "REPLACE_ME_WITH_SSM_PARAMETER_OR_SECRETS_MANAGER_ARN"
+        }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/asserts/jobnode",
+          "awslogs-create-group": "true",
+          "awslogs-region": "REPLACE_ME_WITH_REGION",
+          "awslogs-stream-prefix": "jobnode"
+        }
+      }
+    }
+  ],
+  "tags": [
+    { "key": "asserts.launcher", "value": "job-node" }
+  ]
+}

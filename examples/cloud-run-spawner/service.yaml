@@ -1,0 +1,42 @@
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: asserts-launcher
+  annotations:
+    run.googleapis.com/launch-stage: GA
+spec:
+  template:
+    metadata:
+      annotations:
+        # Cold-start trade-off: pay for one always-warm instance to stay under
+        # the protocol's 2s /health budget on every call.
+        autoscaling.knative.dev/minScale: "1"
+        autoscaling.knative.dev/maxScale: "3"
+        run.googleapis.com/cpu-throttling: "false"
+    spec:
+      serviceAccountName: REPLACE_ME_WITH_RUNTIME_SA_EMAIL
+      timeoutSeconds: 15
+      containerConcurrency: 80
+      containers:
+        - image: REPLACE_ME_WITH_ARTIFACT_REGISTRY_IMAGE
+          ports:
+            - containerPort: 8080
+          resources:
+            limits:
+              cpu: "1"
+              memory: "512Mi"
+          env:
+            - name: LAUNCHER_TENANT_SLUG
+              value: REPLACE_ME
+            - name: LAUNCHER_GROUP_NAME
+              value: REPLACE_ME
+            # Either name the secret directly via Secret Manager...
+            - name: LAUNCHER_BEARER_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: asserts-launcher-token
+                  key: latest
+            - name: SPAWNER_MAX_WORKERS
+              value: "8"
+            - name: SPAWNER_MIN_WORKERS
+              value: "0"

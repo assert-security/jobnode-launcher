@@ -1,0 +1,33 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: asserts-launcher
+  namespace: asserts-launcher
+  labels:
+    app.kubernetes.io/part-of: asserts-jobnode-launcher
+rules:
+  - apiGroups: ["apps"]
+    resources: ["deployments"]
+    resourceNames: ["asserts-jobnode"]
+    verbs: ["get", "watch"]
+  - apiGroups: ["apps"]
+    resources: ["deployments/scale"]
+    resourceNames: ["asserts-jobnode"]
+    verbs: ["get", "update", "patch"]
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list", "delete"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: asserts-launcher
+  namespace: asserts-launcher
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: asserts-launcher
+subjects:
+  - kind: ServiceAccount
+    name: asserts-launcher
+    namespace: asserts-launcher

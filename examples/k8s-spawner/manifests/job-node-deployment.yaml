@@ -1,0 +1,72 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: asserts-jobnode-credentials
+  namespace: asserts-launcher
+type: Opaque
+stringData:
+  # Provided by your Assert Security operator. Rotate by replacing this secret
+  # and bouncing the pods (kubectl rollout restart deployment/asserts-jobnode).
+  VENARI_JOBNODE_CLIENT_SECRET: REPLACE_ME_WITH_OAUTH_CLIENT_SECRET
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: asserts-jobnode
+  namespace: asserts-launcher
+  labels:
+    app: asserts-jobnode
+    app.kubernetes.io/part-of: asserts-jobnode-launcher
+spec:
+  # Replicas is managed by the launcher at runtime via the scale subresource.
+  # Initial value 0 — the launcher will spawn pods on demand.
+  replicas: 0
+  selector:
+    matchLabels:
+      app: asserts-jobnode
+  template:
+    metadata:
+      labels:
+        app: asserts-jobnode
+    spec:
+      # Pull the job-node container image from Assert Security's registry.
+      # The tag comes from your operator at provisioning time.
+      containers:
+        - name: jobnode
+          image: registry.assertsecurity.io/venari-arm64:REPLACE_ME_WITH_TAG
+          imagePullPolicy: IfNotPresent
+          # The job-node container needs /dev/shm sized > 64MB for Chrome.
+          # 2GB is the safe default per the operator runbook.
+          resources:
+            requests:
+              memory: "2Gi"
+              cpu: "500m"
+            limits:
+              memory: "4Gi"
+              cpu: "2"
+          # Chrome SIGBUSes on Docker's default 64MB /dev/shm. Use an emptyDir
+          # Memory volume to give it real RAM-backed shared memory.
+          volumeMounts:
+            - name: dshm
+              mountPath: /dev/shm
+          env:
+            - name: VENARI_MASTER_URL
+              value: "REPLACE_ME_WITH_TENANT_MASTER_URL"
+            - name: VENARI_JOBNODE_CLIENT_ID
+              value: "REPLACE_ME_WITH_OAUTH_CLIENT_ID"
+            - name: VENARI_JOBNODE_SCOPE
+              value: "REPLACE_ME_WITH_OAUTH_SCOPE"
+            - name: VENARI_JOBNODE_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: asserts-jobnode-credentials
+                  key: VENARI_JOBNODE_CLIENT_SECRET
+      volumes:
+        - name: dshm
+          emptyDir:
+            medium: Memory
+            sizeLimit: 2Gi
+      # If you pull from a registry that requires authentication, attach a
+      # docker-registry secret here:
+      # imagePullSecrets:
+      #   - name: assertsecurity-registry-pull

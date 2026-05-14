@@ -1,0 +1,109 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Reference implementation of the Assert Security job-node launcher protocol v1.
+
+Parameters:
+  TenantSlug:
+    Type: String
+    Description: Assert tenant slug this launcher serves (e.g. acme-corp).
+  GroupName:
+    Type: String
+    Description: Assert worker-group name this launcher serves (e.g. "ACME Internal").
+  BearerTokenSecretArn:
+    Type: String
+    Description: ARN of the Secrets Manager secret holding the launcher bearer token. SecretString = the raw token.
+  SpawnerMaxWorkers:
+    Type: Number
+    Default: 4
+    MinValue: 1
+    Description: Maximum concurrent workers the stub spawner will report.
+  SpawnerMinWorkers:
+    Type: Number
+    Default: 0
+    MinValue: 0
+    Description: Soft floor for worker count.
+
+Globals:
+  Function:
+    Timeout: 12
+    MemorySize: 256
+    Runtime: nodejs20.x
+    Architectures: [arm64]
+    Tracing: Active
+
+Resources:
+
+  IdempotencyTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: requestId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: requestId
+          KeyType: HASH
+      TimeToLiveSpecification:
+        AttributeName: expiresAt
+        Enabled: true
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: false
+
+  LauncherFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: dist/
+      Handler: index.handler
+      Environment:
+        Variables:
+          LAUNCHER_TENANT_SLUG: !Ref TenantSlug
+          LAUNCHER_GROUP_NAME: !Ref GroupName
+          LAUNCHER_BEARER_TOKEN_SECRET_ARN: !Ref BearerTokenSecretArn
+          IDEMPOTENCY_TABLE_NAME: !Ref IdempotencyTable
+          SPAWNER_MAX_WORKERS: !Ref SpawnerMaxWorkers
+          SPAWNER_MIN_WORKERS: !Ref SpawnerMinWorkers
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref IdempotencyTable
+        - Statement:
+            - Effect: Allow
+              Action:
+                - secretsmanager:GetSecretValue
+              Resource: !Ref BearerTokenSecretArn
+      Events:
+        Health:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref LauncherHttpApi
+            Method: GET
+            Path: /health
+        ListWorkers:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref LauncherHttpApi
+            Method: GET
+            Path: /workers
+        LaunchWorkers:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref LauncherHttpApi
+            Method: POST
+            Path: /workers/launch
+        TerminateWorker:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref LauncherHttpApi
+            Method: DELETE
+            Path: /workers/{workerId}
+
+  LauncherHttpApi:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      StageName: v1
+
+Outputs:
+  LauncherBaseUrl:
+    Description: Hand this URL (with /v1 suffix) to your Assert operator.
+    Value: !Sub https://${LauncherHttpApi}.execute-api.${AWS::Region}.amazonaws.com/v1
+  IdempotencyTableName:
+    Value: !Ref IdempotencyTable
