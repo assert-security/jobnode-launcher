@@ -17,7 +17,7 @@ The only k8s-specific decision is how the launcher *itself* authenticates to the
 
 ## What this adapter does
 
-When `launch(deltaCount)` is called, the adapter increments the `replicas` field on a target Deployment by `deltaCount`. When `terminate(workerId)` is called, it deletes the pod by name; the Deployment's controller automatically reconciles down. Worker IDs are pod names.
+When `launch(deltaCount)` is called, the adapter increments the `replicas` field on a target Deployment by `deltaCount`. When `terminate(workerId)` is called, it tags that pod with the lowest `pod-deletion-cost` and decrements the Deployment's `replicas`, so the ReplicaSet evicts that specific pod — deleting the pod alone would just make the ReplicaSet recreate it. Worker IDs are pod names.
 
 The adapter does NOT manage:
 
@@ -96,6 +96,6 @@ The launcher's ServiceAccount needs exactly three verbs:
 |---|---|---|
 | `apps` | `deployments` | `get`, `watch` (to observe the worker Deployment) |
 | `apps` | `deployments/scale` | `get`, `update`, `patch` (read + bump `replicas` via the scale subresource) |
-| `""` (core) | `pods` | `get`, `list`, `delete` (to terminate specific workers) |
+| `""` (core) | `pods` | `get`, `list`, `patch` (list workers; tag a pod's deletion-cost) |
 
 Anything broader is over-privileged. The manifest in `launcher-rbac.yaml` is minimal.

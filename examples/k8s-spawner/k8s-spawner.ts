@@ -17,6 +17,13 @@
 import * as k8s from '@kubernetes/client-node';
 import type { WorkerRecord, WorkerState } from '../../reference-lambda/src/types';
 
+// Steers the ReplicaSet to evict a specific worker pod when the Deployment is
+// scaled down: on a scale-down the pod carrying the lowest pod-deletion-cost is
+// removed first.
+// https://kubernetes.io/docs/concepts/workloads/controllers/replicaset/#pod-deletion-cost
+const POD_DELETION_COST_ANNOTATION = 'controller.kubernetes.io/pod-deletion-cost';
+const EVICT_FIRST_DELETION_COST = '-2147483648';
+
 export interface Spawner {
   readonly maxWorkers: number;
   readonly minWorkers: number;
@@ -66,7 +73,11 @@ export class K8sSpawner implements Spawner {
       undefined, undefined, undefined, undefined,
       `app=${this.deploymentName}`
     );
-    return pods.body.items.map(p => this.podToWorker(p));
+    // A pod with a deletionTimestamp is being evicted — it is no longer an
+    // available worker, so drop it rather than report it as running.
+    return pods.body.items
+      .filter(p => !p.metadata?.deletionTimestamp)
+      .map(p => this.podToWorker(p));
   }
 
   async launch(deltaCount: number): Promise<WorkerRecord[]> {
@@ -88,13 +99,29 @@ export class K8sSpawner implements Spawner {
   }
 
   async terminate(workerId: string): Promise<void> {
+    // Worker pods are owned by the Deployment's ReplicaSet — deleting a pod
+    // alone just makes the ReplicaSet recreate it. To actually remove a worker
+    // we lower the Deployment's replica count, and steer the ReplicaSet to
+    // evict THIS pod by giving it the lowest pod-deletion-cost.
     try {
-      await this.core.deleteNamespacedPod(workerId, this.namespace);
+      await this.core.patchNamespacedPod(
+        workerId,
+        this.namespace,
+        { metadata: { annotations: { [POD_DELETION_COST_ANNOTATION]: EVICT_FIRST_DELETION_COST } } },
+        undefined, undefined, undefined, undefined, undefined,
+        { headers: { 'Content-Type': k8s.PatchUtils.PATCH_FORMAT_STRATEGIC_MERGE_PATCH } }
+      );
     } catch (err) {
       // 404 = pod already gone, treat as idempotent success
       if (isHttpStatus(err, 404)) return;
       throw err;
     }
+
+    const scale = await this.apps.readNamespacedDeploymentScale(this.deploymentName, this.namespace);
+    const current = scale.body.spec?.replicas ?? 0;
+    if (current <= 0) return;
+    scale.body.spec = { ...(scale.body.spec ?? {}), replicas: current - 1 };
+    await this.apps.replaceNamespacedDeploymentScale(this.deploymentName, this.namespace, scale.body);
   }
 
   async healthDetails(): Promise<Record<string, unknown>> {
