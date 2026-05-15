@@ -61,6 +61,13 @@ spec:
                 secretKeyRef:
                   name: asserts-jobnode-credentials
                   key: node__authinfo__clientsecret
+            # The job-node must run the analyzer in a subprocess (not in-process)
+            # and tolerate its own auto-generated self-signed local cert. These
+            # two are fixed for every deployment — do not change them.
+            - name: node__analyzerinprocess
+              value: "false"
+            - name: Server__IgnoreCertErrors
+              value: "true"
       volumes:
         - name: dshm
           emptyDir:

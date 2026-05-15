@@ -19,9 +19,11 @@
         "initProcessEnabled": true
       },
       "environment": [
-        { "name": "node__masternodebaseaddress",        "value": "REPLACE_ME_WITH_TENANT_MASTER_URL" },
-        { "name": "node__authinfo__clientid", "value": "REPLACE_ME_WITH_OAUTH_CLIENT_ID" },
-        { "name": "node__authinfo__scope",     "value": "REPLACE_ME_WITH_OAUTH_SCOPE" }
+        { "name": "node__masternodebaseaddress", "value": "REPLACE_ME_WITH_TENANT_MASTER_URL" },
+        { "name": "node__authinfo__clientid",    "value": "REPLACE_ME_WITH_OAUTH_CLIENT_ID" },
+        { "name": "node__authinfo__scope",       "value": "REPLACE_ME_WITH_OAUTH_SCOPE" },
+        { "name": "node__analyzerinprocess",     "value": "false" },
+        { "name": "Server__IgnoreCertErrors",   "value": "true" }
       ],
       "secrets": [
         {
