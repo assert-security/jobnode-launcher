@@ -22,7 +22,7 @@ When `launch(deltaCount)` is called, the adapter increments the `replicas` field
 The adapter does NOT manage:
 
 - The Deployment itself — you create that once (manifest in [`manifests/job-node-deployment.yaml`](manifests/job-node-deployment.yaml))
-- The Secret holding `VENARI_JOBNODE_CLIENT_SECRET` — you create that once and reference it from the Deployment
+- The Secret holding `node__authinfo__clientsecret` — you create that once and reference it from the Deployment
 
 ---
 

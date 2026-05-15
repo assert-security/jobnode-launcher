@@ -7,7 +7,7 @@ type: Opaque
 stringData:
   # Provided by your Assert Security operator. Rotate by replacing this secret
   # and bouncing the pods (kubectl rollout restart deployment/asserts-jobnode).
-  VENARI_JOBNODE_CLIENT_SECRET: REPLACE_ME_WITH_OAUTH_CLIENT_SECRET
+  node__authinfo__clientsecret: REPLACE_ME_WITH_OAUTH_CLIENT_SECRET
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -50,17 +50,17 @@ spec:
             - name: dshm
               mountPath: /dev/shm
           env:
-            - name: VENARI_MASTER_URL
+            - name: node__masternodebaseaddress
               value: "REPLACE_ME_WITH_TENANT_MASTER_URL"
-            - name: VENARI_JOBNODE_CLIENT_ID
+            - name: node__authinfo__clientid
               value: "REPLACE_ME_WITH_OAUTH_CLIENT_ID"
-            - name: VENARI_JOBNODE_SCOPE
+            - name: node__authinfo__scope
               value: "REPLACE_ME_WITH_OAUTH_SCOPE"
-            - name: VENARI_JOBNODE_CLIENT_SECRET
+            - name: node__authinfo__clientsecret
               valueFrom:
                 secretKeyRef:
                   name: asserts-jobnode-credentials
-                  key: VENARI_JOBNODE_CLIENT_SECRET
+                  key: node__authinfo__clientsecret
       volumes:
         - name: dshm
           emptyDir:

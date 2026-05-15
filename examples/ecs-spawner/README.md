@@ -42,7 +42,7 @@ Workers are launched as one-shot Fargate tasks (`RunTask`). The Task Definition 
    ```bash
    aws ecs register-task-definition --cli-input-json file://task-definition.json
    ```
-3. Store the four worker env-var values as SSM Parameters (SecureString for `VENARI_JOBNODE_CLIENT_SECRET`).
+3. Store the four worker env-var values as SSM Parameters (SecureString for `node__authinfo__clientsecret`).
 4. Attach `iam-policy.json` to the Lambda execution role created by the reference SAM template.
 5. Build the launcher with the ECS spawner swapped in:
    ```bash

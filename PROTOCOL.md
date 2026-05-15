@@ -337,10 +337,10 @@ The Venari job-node container that the launcher spawns needs four environment va
 
 | Variable | Secret? | Source |
 |---|---|---|
-| `VENARI_MASTER_URL` | no | Issued at provisioning, configured at launcher deploy time |
-| `VENARI_JOBNODE_CLIENT_ID` | no | Issued at provisioning, configured at launcher deploy time |
-| `VENARI_JOBNODE_CLIENT_SECRET` | **yes** | Issued at provisioning, stored in your secret manager |
-| `VENARI_JOBNODE_SCOPE` | no | Issued at provisioning, configured at launcher deploy time |
+| `node__masternodebaseaddress` | no | Issued at provisioning, configured at launcher deploy time |
+| `node__authinfo__clientid` | no | Issued at provisioning, configured at launcher deploy time |
+| `node__authinfo__clientsecret` | **yes** | Issued at provisioning, stored in your secret manager |
+| `node__authinfo__scope` | no | Issued at provisioning, configured at launcher deploy time |
 
 These values are NOT sent in the `POST /workers/launch` body. The launcher pre-knows them from its own configuration and injects them into the worker container when it spawns.
 
@@ -365,7 +365,7 @@ The launcher SHOULD emit a structured log line for every inbound request, includ
 The launcher MUST NOT log:
 
 - The bearer token (or any prefix longer than 4 characters)
-- The worker `VENARI_JOBNODE_CLIENT_SECRET`
+- The worker `node__authinfo__clientsecret`
 - The contents of `Authorization` headers verbatim
 
 ### 9.2. Caller-side observability

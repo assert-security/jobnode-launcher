@@ -105,8 +105,8 @@ These cannot be expressed as HTTP assertions:
 
 - **M1.** The bearer token is stored in a secret manager (AWS Secrets Manager, k8s Secret, etc.) — not committed to a repo or set in a plain env var that ends up in process listings on shared hosts.
 - **M2.** The bearer token is fetched on launcher cold start and held only in process memory thereafter.
-- **M3.** When the worker container starts, `VENARI_JOBNODE_CLIENT_SECRET` is injected from the launcher's own secret store — not embedded in an image, baked into a config map, or transmitted across the protocol.
-- **M4.** The launcher's logs contain neither the bearer token nor `VENARI_JOBNODE_CLIENT_SECRET`. Grep them.
+- **M3.** When the worker container starts, `node__authinfo__clientsecret` is injected from the launcher's own secret store — not embedded in an image, baked into a config map, or transmitted across the protocol.
+- **M4.** The launcher's logs contain neither the bearer token nor `node__authinfo__clientsecret`. Grep them.
 - **M5.** TLS certificates used by the launcher endpoint are issued by a public CA or by your private CA bundle that the Assert side trusts. Self-signed certificates are dev-only.
 
 ---
