@@ -21,7 +21,7 @@ The launcher stays on AWS Lambda (the reference); only the spawn step changes.
                                                          └────────────────┘
 ```
 
-Workers are launched as one-shot Fargate tasks (`RunTask`). The Task Definition references the job-node image and injects the `VENARI_*` env vars from Secrets Manager / SSM Parameter Store.
+Workers are launched as one-shot Fargate tasks (`RunTask`). The Task Definition references the job-node image and injects the `node__*` env vars from Secrets Manager / SSM Parameter Store.
 
 ---
 

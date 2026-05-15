@@ -58,11 +58,22 @@ The most common shape: the launcher and the workers live in the same cluster, th
    ```bash
    kubectl apply -f manifests/launcher-deployment.yaml
    ```
+
+> **HTTPS is required — the job-scaler rejects any launcher URL that does not begin with `https://`.**
+> The Service manifest defaults to plain HTTP on port 80 because TLS termination belongs at the load balancer,
+> not in the launcher container. Before handing the external URL to your Assert operator you MUST:
+> - Provision a TLS certificate for the hostname (ACM on EKS, managed cert on GKE, etc.).
+> - Configure the load balancer to terminate TLS on port 443 and forward plain HTTP to the launcher pod on port 8080.
+> - Confirm the external URL starts with `https://`.
+>
+> The `launcher-deployment.yaml` manifest carries commented ACM-certificate annotations for EKS as a starting point.
+> Skipping this step results in the Assert job-scaler refusing to register the launcher at provisioning time.
+
 5. Read the Service's external URL and hand it to your Assert operator:
    ```bash
    kubectl -n asserts-launcher get service asserts-launcher
    ```
-   The launcher serves plain HTTP on port 8080; the job-scaler calls it over HTTPS. Terminate TLS at the load balancer — `launcher-deployment.yaml` carries commented ACM-certificate annotations for EKS.
+   Confirm the URL begins with `https://` before sending it to the operator (see the warning above).
 
 ### Option B — launcher runs outside the cluster (Lambda, Cloud Run, VM)
 

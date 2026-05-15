@@ -263,6 +263,11 @@ The following paths are reserved for future protocol versions and MUST NOT be re
 - `GET /metrics` — Prometheus-style metrics
 - `GET /version` — separate version probe (currently folded into `/health`)
 
+The following paths are reserved for container-runtime health probes and are not protocol endpoints. They are intentionally unauthenticated — a kubelet liveness/readiness probe cannot present a Bearer token. Launchers running as containers SHOULD respond to them with `200 ok`; launchers running on Lambda or other FaaS SHOULD ignore them (they will never arrive via API Gateway):
+
+- `GET /livez` — liveness probe (used by the reference server.ts)
+- `GET /readyz` — readiness probe (used by the reference server.ts)
+
 ---
 
 ## 6. Idempotency

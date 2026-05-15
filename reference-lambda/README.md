@@ -47,7 +47,7 @@ The launcher needs four pieces of configuration. Three come as Lambda env vars (
 | SAM parameter `BearerTokenSecretArn` | ARN of the Secrets Manager secret holding the bearer token. |
 | SAM parameters `SpawnerMaxWorkers` / `SpawnerMinWorkers` | Ceiling and floor reported by `GET /workers`. The stub spawner enforces `maxWorkers` locally. Your real spawner should enforce them against your actual scheduler. |
 
-You do NOT need to configure the worker's OAuth2 credentials (`VENARI_*`) on the launcher itself — those are configured on the worker container template in your spawner adapter. See the [k8s example](../examples/k8s-spawner/manifests/job-node-deployment.yaml).
+You do NOT need to configure the worker's OAuth2 credentials (`node__*`) on the launcher itself — those are configured on the worker container template in your spawner adapter. See the [k8s example](../examples/k8s-spawner/manifests/job-node-deployment.yaml).
 
 ---
 

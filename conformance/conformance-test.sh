@@ -142,39 +142,78 @@ _assert 2.5 '401 body is parseable JSON ≤ 1KB' _check_2_5
 
 echo 'Section 3 — GET /health'
 
-_check_3_x() {
+_check_3_1() {
   local status; status=$(_call GET /health '')
-  _status_is "$status" 200 || return 1
-  jq -e '
-    .status as $s |
-    .protocolVersion == 1
-    and ($s == "healthy" or $s == "degraded" or $s == "unhealthy")
-    and (.capabilities | type == "array")
-    and (.capabilities | index("launch")) != null
-    and (.capabilities | index("list"))   != null
-  ' /tmp/conformance-body >/dev/null
+  _status_is "$status" 200
 }
-_assert 3.x 'Shape: status, protocolVersion=1, capabilities ⊇ {launch,list}' _check_3_x
+_assert 3.1 'Returns 200 with a JSON body' _check_3_1
+
+_check_3_2() {
+  jq -e '.status | test("^(healthy|degraded|unhealthy)$")' /tmp/conformance-body >/dev/null
+}
+_assert 3.2 'Body includes status (healthy|degraded|unhealthy)' _check_3_2
+
+_check_3_3() {
+  jq -e '.protocolVersion == 1' /tmp/conformance-body >/dev/null
+}
+_assert 3.3 'Body includes protocolVersion: 1' _check_3_3
+
+_check_3_4() {
+  jq -e '.capabilities | type == "array"' /tmp/conformance-body >/dev/null
+}
+_assert 3.4 'Body includes capabilities as an array' _check_3_4
+
+_check_3_5() {
+  jq -e '(.capabilities | index("launch")) != null and (.capabilities | index("list")) != null' /tmp/conformance-body >/dev/null
+}
+_assert 3.5 'capabilities contains launch and list' _check_3_5
+
+_check_3_6() {
+  # Use curl's own time_total (seconds, fractional) — portable across Linux and macOS.
+  local timing; timing=$(curl -sS -o /tmp/conformance-body \
+    -w '%{http_code} %{time_total}' \
+    -H "Authorization: Bearer $LAUNCHER_TOKEN" \
+    --max-time "$HEALTH_TIMEOUT" \
+    "${LAUNCHER_BASE_URL}/health")
+  local status elapsed_s
+  read -r status elapsed_s <<<"$timing"
+  _status_is "$status" 200 || return 1
+  # Compare as integers after multiplying by 1000 (awk for float arithmetic).
+  local elapsed_ms; elapsed_ms=$(awk "BEGIN{print int($elapsed_s * 1000)}")
+  (( elapsed_ms <= 2000 ))
+}
+_assert 3.6 'Response arrives within 2 seconds' _check_3_6
 
 # -- section 4: /workers ----------------------------------------------------
 
 echo 'Section 4 — GET /workers'
 
-_check_4_x() {
+_check_4_1() {
   local status; status=$(_call GET /workers '')
-  _status_is "$status" 200 || return 1
+  _status_is "$status" 200
+}
+_assert 4.1 'Returns 200 with a JSON body' _check_4_1
+
+_check_4_2() {
+  jq -e '.workers | type == "array"' /tmp/conformance-body >/dev/null
+}
+_assert 4.2 'Body includes workers as an array' _check_4_2
+
+_check_4_3() {
+  jq -e '(.limits.maxWorkers | type == "number") and (.limits.minWorkers | type == "number")' /tmp/conformance-body >/dev/null
+}
+_assert 4.3 'Body includes limits.maxWorkers and limits.minWorkers as integers' _check_4_3
+
+_check_4_4() {
   jq -e '
-    (.workers | type == "array")
-    and (.limits.maxWorkers | type == "number")
-    and (.limits.minWorkers | type == "number")
-    and (.workers | all(
+    .workers | all(
       (.workerId | test("^[A-Za-z0-9_-]{1,64}$"))
       and (.state | test("^(starting|running|terminating|failed)$"))
       and (.startedAt | test("^[0-9]{4}-[0-9]{2}-[0-9]{2}T"))
-    ))
+    )
   ' /tmp/conformance-body >/dev/null
 }
-_assert 4.x 'Shape: workers array + limits + per-worker validity' _check_4_x
+_assert 4.4 'Every workers[i] has valid workerId, state, and startedAt' _check_4_4
 
 # -- section 5: /workers/launch ---------------------------------------------
 

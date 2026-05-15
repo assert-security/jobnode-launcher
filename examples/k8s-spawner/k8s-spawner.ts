@@ -82,7 +82,6 @@ export class K8sSpawner implements Spawner {
 
   async launch(deltaCount: number): Promise<WorkerRecord[]> {
     if (deltaCount <= 0) return [];
-    const before = new Set((await this.list()).map(w => w.workerId));
 
     const scale = await this.apps.readNamespacedDeploymentScale(this.deploymentName, this.namespace);
     const current = scale.body.spec?.replicas ?? 0;
@@ -92,10 +91,10 @@ export class K8sSpawner implements Spawner {
     scale.body.spec = { ...(scale.body.spec ?? {}), replicas: target };
     await this.apps.replaceNamespacedDeploymentScale(this.deploymentName, this.namespace, scale.body);
 
-    // Give the controller a beat to create the pods, then diff to report new ones.
-    await sleep(750);
-    const after = await this.list();
-    return after.filter(w => !before.has(w.workerId));
+    // Pod names are not yet known — the controller creates them asynchronously.
+    // The protocol marks workerInstances as optional; callers discover live
+    // workers through GET /workers once the pods reach Running state.
+    return [];
   }
 
   async terminate(workerId: string): Promise<void> {
@@ -192,8 +191,4 @@ function parseIntEnv(name: string, fallback: number): number {
   if (!raw) return fallback;
   const n = Number.parseInt(raw, 10);
   return Number.isFinite(n) ? n : fallback;
-}
-
-function sleep(ms: number): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, ms));
 }

@@ -161,30 +161,72 @@ Test-Assertion '2.4' 'Correct bearer token accepted' {
 
 Write-Host 'Section 3 — GET /health'
 
-Test-Assertion '3.x' 'Shape: status, protocolVersion=1, capabilities ⊇ {launch,list}' {
+$Script:LastHealthResponse = $null
+
+Test-Assertion '3.1' 'Returns 200 with a JSON body' {
     $r = Invoke-LauncherRequest -Method GET -Path '/health' -TimeoutSec $Script:HealthTimeoutSec
-    if ($r.Status -ne 200) { return $false }
-    $j = Get-LauncherJson $r
-    if ($j.PSObject.Properties['status'] -eq $null)          { return $false }
+    $Script:LastHealthResponse = $r
+    $r.Status -eq 200
+}
+
+Test-Assertion '3.2' 'Body includes status (healthy|degraded|unhealthy)' {
+    $j = Get-LauncherJson $Script:LastHealthResponse
+    if ($j.PSObject.Properties['status'] -eq $null) { return $false }
+    @('healthy','degraded','unhealthy') -contains $j.status
+}
+
+Test-Assertion '3.3' 'Body includes protocolVersion: 1' {
+    $j = Get-LauncherJson $Script:LastHealthResponse
     if ($j.PSObject.Properties['protocolVersion'] -eq $null) { return $false }
-    if ($j.PSObject.Properties['capabilities'] -eq $null)    { return $false }
-    if ($j.protocolVersion -ne 1) { return $false }
-    if (@('healthy','degraded','unhealthy') -notcontains $j.status) { return $false }
+    $j.protocolVersion -eq 1
+}
+
+Test-Assertion '3.4' 'Body includes capabilities as an array' {
+    $j = Get-LauncherJson $Script:LastHealthResponse
+    if ($j.PSObject.Properties['capabilities'] -eq $null) { return $false }
+    $j.capabilities -is [System.Collections.IEnumerable]
+}
+
+Test-Assertion '3.5' 'capabilities contains launch and list' {
+    $j = Get-LauncherJson $Script:LastHealthResponse
     ($j.capabilities -contains 'launch') -and ($j.capabilities -contains 'list')
+}
+
+Test-Assertion '3.6' 'Response arrives within 2 seconds' {
+    $sw = [System.Diagnostics.Stopwatch]::StartNew()
+    $r = Invoke-LauncherRequest -Method GET -Path '/health' -TimeoutSec $Script:HealthTimeoutSec
+    $sw.Stop()
+    if ($r.Status -ne 200) { return $false }
+    $sw.ElapsedMilliseconds -le 2000
 }
 
 # -- section 4: /workers ----------------------------------------------------
 
 Write-Host 'Section 4 — GET /workers'
 
-Test-Assertion '4.x' 'Shape: workers array + limits + per-worker validity' {
+$Script:LastWorkersResponse = $null
+
+Test-Assertion '4.1' 'Returns 200 with a JSON body' {
     $r = Invoke-LauncherRequest -Method GET -Path '/workers' -TimeoutSec $Script:WorkersTimeoutSec
-    if ($r.Status -ne 200) { return $false }
-    $j = Get-LauncherJson $r
-    if (-not ($j.PSObject.Properties['workers'] -and $j.PSObject.Properties['limits'])) { return $false }
-    if ($j.workers -isnot [System.Collections.IEnumerable]) { return $false }
+    $Script:LastWorkersResponse = $r
+    $r.Status -eq 200
+}
+
+Test-Assertion '4.2' 'Body includes workers as an array' {
+    $j = Get-LauncherJson $Script:LastWorkersResponse
+    ($j.PSObject.Properties['workers'] -ne $null) -and ($j.workers -is [System.Collections.IEnumerable])
+}
+
+Test-Assertion '4.3' 'Body includes limits.maxWorkers and limits.minWorkers as integers' {
+    $j = Get-LauncherJson $Script:LastWorkersResponse
+    if ($j.PSObject.Properties['limits'] -eq $null) { return $false }
     if ($j.limits.PSObject.Properties['maxWorkers'] -eq $null) { return $false }
     if ($j.limits.PSObject.Properties['minWorkers'] -eq $null) { return $false }
+    $true
+}
+
+Test-Assertion '4.4' 'Every workers[i] has valid workerId, state, and startedAt' {
+    $j = Get-LauncherJson $Script:LastWorkersResponse
     foreach ($w in @($j.workers)) {
         if ($w.workerId -notmatch '^[A-Za-z0-9_-]{1,64}$') { return $false }
         if (@('starting','running','terminating','failed') -notcontains $w.state) { return $false }

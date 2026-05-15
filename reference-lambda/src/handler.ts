@@ -60,16 +60,26 @@ export async function handler(event: APIGatewayProxyEventV2): Promise<APIGateway
     return error(401, authResult.error, errorMessage(authResult.error));
   }
 
-  if (method === 'GET' && path.endsWith('/health')) {
+  // Route matching accepts two forms:
+  //   - bare path:   /health, /workers, /workers/launch, /workers/{id}
+  //   - prefixed:    /v1/health, /v1/workers, etc. (customer base URL includes a path segment)
+  // Only a single prefix segment is allowed — /v1/evil/health does not match /health.
+  // The prefix pattern ^(?:\/[^/]+)? strips zero or one leading /<segment>.
+  const ROUTE_HEALTH          = /^(?:\/[^/]+)?\/health$/;
+  const ROUTE_WORKERS         = /^(?:\/[^/]+)?\/workers$/;
+  const ROUTE_WORKERS_LAUNCH  = /^(?:\/[^/]+)?\/workers\/launch$/;
+  const ROUTE_WORKERS_DELETE  = /^(?:\/[^/]+)?\/workers\/([A-Za-z0-9_-]{1,64})\/?$/;
+
+  if (method === 'GET' && ROUTE_HEALTH.test(path)) {
     return await getHealth(deps);
   }
-  if (method === 'GET' && path.endsWith('/workers')) {
+  if (method === 'GET' && ROUTE_WORKERS.test(path)) {
     return await getWorkers(deps);
   }
-  if (method === 'POST' && path.endsWith('/workers/launch')) {
+  if (method === 'POST' && ROUTE_WORKERS_LAUNCH.test(path)) {
     return await postWorkersLaunch(event, deps);
   }
-  const deleteMatch = method === 'DELETE' ? /\/workers\/([^/]+)\/?$/.exec(path) : null;
+  const deleteMatch = method === 'DELETE' ? ROUTE_WORKERS_DELETE.exec(path) : null;
   if (deleteMatch) {
     return await deleteWorker(deleteMatch[1]!, deps);
   }

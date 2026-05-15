@@ -1,4 +1,4 @@
-import { timingSafeEqual } from 'node:crypto';
+import { createHmac, timingSafeEqual, randomBytes } from 'node:crypto';
 
 export type AuthResult =
   | { ok: true }
@@ -18,13 +18,14 @@ export function verifyBearer(authorizationHeader: string | undefined, expectedTo
   return { ok: true };
 }
 
+// A random key generated once per process lifetime. Its only purpose is to
+// make the two HMAC digests the same length regardless of the input strings,
+// eliminating the length oracle that a naive timingSafeEqual(aBuf, bBuf) has
+// when the buffers differ in length.
+const HMAC_KEY = randomBytes(32);
+
 function constantTimeEqual(a: string, b: string): boolean {
-  const aBuf = Buffer.from(a, 'utf8');
-  const bBuf = Buffer.from(b, 'utf8');
-  if (aBuf.length !== bBuf.length) {
-    // Still consume time proportional to bBuf to avoid leaking length.
-    timingSafeEqual(bBuf, bBuf);
-    return false;
-  }
-  return timingSafeEqual(aBuf, bBuf);
+  const digestA = createHmac('sha256', HMAC_KEY).update(a, 'utf8').digest();
+  const digestB = createHmac('sha256', HMAC_KEY).update(b, 'utf8').digest();
+  return timingSafeEqual(digestA, digestB);
 }

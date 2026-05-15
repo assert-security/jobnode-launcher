@@ -31,7 +31,7 @@ Each numbered item below is one assertion. Numbers correspond to test IDs in the
 ### 1. Transport
 
 1.1. The base URL uses HTTPS.
-1.2. The launcher responds to TLS 1.2; 1.3 if your platform supports it.
+1.2. **Manual (see M6 below).** The launcher accepts TLS 1.2 connections; TLS 1.3 if the platform supports it. Verifying the minimum TLS version from within a curl-based script requires environment-specific certificate and listener configuration that varies too widely to automate reliably. Verify out-of-band using your TLS scanning tool of choice (e.g. `openssl s_client -tls1_1 host:443` should fail; `openssl s_client -tls1_2 host:443` should succeed).
 1.3. Every response sets `Content-Type: application/json; charset=utf-8` when a body is present.
 1.4. Every response sets `X-Protocol-Version: 1`.
 
@@ -108,6 +108,7 @@ These cannot be expressed as HTTP assertions:
 - **M3.** When the worker container starts, `node__authinfo__clientsecret` is injected from the launcher's own secret store — not embedded in an image, baked into a config map, or transmitted across the protocol.
 - **M4.** The launcher's logs contain neither the bearer token nor `node__authinfo__clientsecret`. Grep them.
 - **M5.** TLS certificates used by the launcher endpoint are issued by a public CA or by your private CA bundle that the Assert side trusts. Self-signed certificates are dev-only.
+- **M6.** (Corresponds to assertion 1.2.) The launcher accepts TLS 1.2 connections. Verify by attempting a TLS 1.1 handshake (should fail) and a TLS 1.2 handshake (should succeed): `openssl s_client -connect <host>:443 -tls1_1` should return a handshake failure; `openssl s_client -connect <host>:443 -tls1_2` should complete successfully.
 
 ---
 
