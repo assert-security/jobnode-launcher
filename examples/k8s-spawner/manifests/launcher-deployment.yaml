@@ -1,0 +1,115 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: asserts-launcher-credentials
+  namespace: asserts-launcher
+type: Opaque
+stringData:
+  # The Bearer token your Assert Security operator issued for this worker group.
+  # The launcher checks every inbound request against it. Rotate by replacing
+  # this value and running: kubectl -n asserts-launcher rollout restart deployment/asserts-launcher
+  LAUNCHER_BEARER_TOKEN: REPLACE_ME_WITH_LAUNCHER_BEARER_TOKEN
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: asserts-launcher
+  namespace: asserts-launcher
+  labels:
+    app: asserts-launcher
+    app.kubernetes.io/part-of: asserts-jobnode-launcher
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: asserts-launcher
+  template:
+    metadata:
+      labels:
+        app: asserts-launcher
+    spec:
+      # Runs as the ServiceAccount whose RBAC allows scaling the worker
+      # Deployment and deleting its pods (launcher-rbac.yaml).
+      serviceAccountName: asserts-launcher
+      containers:
+        - name: launcher
+          # The launcher container built from reference-lambda/Dockerfile with
+          # the k8s spawner swapped in. See the README for the build steps.
+          image: REPLACE_ME_WITH_LAUNCHER_IMAGE
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8080
+          env:
+            - name: PORT
+              value: "8080"
+            - name: LAUNCHER_TENANT_SLUG
+              value: "REPLACE_ME_WITH_TENANT_SLUG"
+            - name: LAUNCHER_GROUP_NAME
+              value: "REPLACE_ME_WITH_GROUP_NAME"
+            - name: LAUNCHER_BEARER_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: asserts-launcher-credentials
+                  key: LAUNCHER_BEARER_TOKEN
+            # Ceiling / floor the launcher reports on GET /workers. The k8s
+            # spawner enforces maxWorkers against the Deployment's replica count.
+            - name: SPAWNER_MAX_WORKERS
+              value: "4"
+            - name: SPAWNER_MIN_WORKERS
+              value: "0"
+            # The worker Deployment the spawner scales. Must match
+            # job-node-deployment.yaml.
+            - name: K8S_NAMESPACE
+              value: "asserts-launcher"
+            - name: K8S_DEPLOYMENT_NAME
+              value: "asserts-jobnode"
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "256Mi"
+              cpu: "500m"
+          livenessProbe:
+            httpGet:
+              path: /livez
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: http
+            initialDelaySeconds: 3
+            periodSeconds: 5
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: asserts-launcher
+  namespace: asserts-launcher
+  labels:
+    app.kubernetes.io/part-of: asserts-jobnode-launcher
+  # The Assert job-scaler calls the launcher over HTTPS. The launcher container
+  # serves plain HTTP on 8080 — terminate TLS at the load balancer. On EKS,
+  # attach an ACM certificate and expose 443 by uncommenting the annotations
+  # and the https port below:
+  #
+  # annotations:
+  #   service.beta.kubernetes.io/aws-load-balancer-ssl-cert: arn:aws:acm:REGION:ACCOUNT:certificate/REPLACE_ME
+  #   service.beta.kubernetes.io/aws-load-balancer-backend-protocol: http
+  #   service.beta.kubernetes.io/aws-load-balancer-ssl-ports: "443"
+spec:
+  type: LoadBalancer
+  selector:
+    app: asserts-launcher
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+    # When the ACM annotations above are set, expose 443 instead of (or
+    # alongside) port 80:
+    # - name: https
+    #   port: 443
+    #   targetPort: http

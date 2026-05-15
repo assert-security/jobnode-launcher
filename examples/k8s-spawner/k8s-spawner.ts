@@ -1,14 +1,30 @@
-// Kubernetes spawner adapter. Drop-in replacement for reference-lambda/src/spawner.ts.
+// Kubernetes spawner adapter — a true drop-in replacement for
+// reference-lambda/src/spawner.ts.
 //
-// Scales a target Deployment up and down to spawn/terminate Venari job-node workers.
-// Cloud-neutral — runs against any conformant Kubernetes API server.
+// Scales a target Deployment up and down to spawn/terminate Venari job-node
+// workers. Cloud-neutral — runs against any conformant Kubernetes API server.
 //
-// Required NPM deps to add to reference-lambda/package.json:
-//   "@kubernetes/client-node": "^0.20.0"
+// To swap it in, copy this file over the reference launcher's spawner.ts and
+// rewrite the relative import prefix so it resolves from src/ (the example
+// README gives the exact `cp` + `sed`), then add the k8s client dependency:
+//
+//   npm install @kubernetes/client-node@^0.20.0
+//
+// This file owns the Spawner interface as well as the K8sSpawner implementation
+// and the getSpawner() factory the handler imports — so once copied in, no
+// hand-editing of spawner.ts is needed.
 
 import * as k8s from '@kubernetes/client-node';
-import type { Spawner } from '../../reference-lambda/src/spawner';
 import type { WorkerRecord, WorkerState } from '../../reference-lambda/src/types';
+
+export interface Spawner {
+  readonly maxWorkers: number;
+  readonly minWorkers: number;
+  list(): Promise<WorkerRecord[]>;
+  launch(deltaCount: number): Promise<WorkerRecord[]>;
+  terminate(workerId: string): Promise<void>;
+  healthDetails(): Promise<Record<string, unknown>>;
+}
 
 export interface K8sSpawnerOptions {
   namespace: string;
@@ -104,6 +120,28 @@ export class K8sSpawner implements Spawner {
   }
 }
 
+// Module-scoped singleton — the handler calls getSpawner() once per process and
+// reuses it. A real spawner is stateless against the cluster, so the singleton
+// only caches the k8s client connection.
+let singleton: Spawner | null = null;
+
+export function getSpawner(): Spawner {
+  if (!singleton) {
+    singleton = new K8sSpawner({
+      namespace: process.env['K8S_NAMESPACE'] ?? 'asserts-launcher',
+      deploymentName: process.env['K8S_DEPLOYMENT_NAME'] ?? 'asserts-jobnode',
+      maxWorkers: parseIntEnv('SPAWNER_MAX_WORKERS', 4),
+      minWorkers: parseIntEnv('SPAWNER_MIN_WORKERS', 0),
+      kubeconfigYaml: process.env['K8S_KUBECONFIG_YAML'],
+    });
+  }
+  return singleton;
+}
+
+export function setSpawnerForTest(impl: Spawner | null): void {
+  singleton = impl;
+}
+
 function mapPodPhase(phase: string | undefined): WorkerState {
   switch (phase) {
     case 'Pending':   return 'starting';
@@ -120,6 +158,13 @@ function isHttpStatus(err: unknown, status: number): boolean {
       && 'response' in err
       && typeof (err as { response?: { statusCode?: unknown } }).response?.statusCode === 'number'
       && (err as { response: { statusCode: number } }).response.statusCode === status;
+}
+
+function parseIntEnv(name: string, fallback: number): number {
+  const raw = process.env[name];
+  if (!raw) return fallback;
+  const n = Number.parseInt(raw, 10);
+  return Number.isFinite(n) ? n : fallback;
 }
 
 function sleep(ms: number): Promise<void> {
