@@ -107,7 +107,7 @@ These cannot be expressed as HTTP assertions:
 - **M2.** The bearer token is fetched on launcher cold start and held only in process memory thereafter.
 - **M3.** When the worker container starts, `node__authinfo__clientsecret` is injected from the launcher's own secret store — not embedded in an image, baked into a config map, or transmitted across the protocol.
 - **M4.** The launcher's logs contain neither the bearer token nor `node__authinfo__clientsecret`. Grep them.
-- **M5.** TLS certificates used by the launcher endpoint are issued by a public CA or by your private CA bundle that the Assert side trusts. Self-signed certificates are dev-only.
+- **M5.** TLS certificates used by the launcher endpoint are issued by a public CA or by your private CA bundle that the Assert Security side trusts. Self-signed certificates are dev-only.
 - **M6.** (Corresponds to assertion 1.2.) The launcher accepts TLS 1.2 connections. Verify by attempting a TLS 1.1 handshake (should fail) and a TLS 1.2 handshake (should succeed): `openssl s_client -connect <host>:443 -tls1_1` should return a handshake failure; `openssl s_client -connect <host>:443 -tls1_2` should complete successfully.
 
 ---

@@ -15,8 +15,8 @@ You can also run the launcher entirely outside GKE (in Cloud Run) while the work
 
 ```
 ┌─────────────────┐  HTTPS  ┌────────────────┐  k8s API  ┌────────────────┐
-│ Assert job-     │────────▶│ Cloud Run      │──────────▶│ GKE Autopilot/ │
-│ scaler          │         │ (launcher)     │           │ Standard       │
+│ Assert Security │────────▶│ Cloud Run      │──────────▶│ GKE Autopilot/ │
+│ job-scaler      │         │ (launcher)     │           │ Standard       │
 └─────────────────┘         └────────┬───────┘           │  (workers)     │
                                      │                   └────────────────┘
                             ┌────────▼──────────┐
@@ -58,8 +58,8 @@ Prereqs:
 - `gcloud` CLI authenticated against your project
 - A GCP project with Cloud Run, Cloud Build, Artifact Registry, Firestore, Secret Manager APIs enabled
 - A GKE cluster (Autopilot or Standard) where the worker Deployment will live
-- The four worker env-var values (master URL, OAuth client id, secret, scope) from your Assert operator
-- A bearer token from your Assert operator, stored in Secret Manager:
+- The four worker env-var values (master URL, OAuth client id, secret, scope) from your Assert Security operator
+- A bearer token from your Assert Security operator, stored in Secret Manager:
   ```bash
   echo -n "$BEARER_TOKEN" | gcloud secrets create asserts-launcher-token --data-file=-
   ```
@@ -77,7 +77,7 @@ export GROUP_NAME="ACME Internal"
 bash deploy.sh
 ```
 
-The script outputs the Cloud Run service URL — hand it to your Assert operator.
+The script outputs the Cloud Run service URL — hand it to your Assert Security operator.
 
 ---
 

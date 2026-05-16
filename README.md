@@ -8,7 +8,7 @@ Protocol specification, reference implementation, and adapters for customers who
 
 | Path | What it is |
 |---|---|
-| [PROTOCOL.md](PROTOCOL.md) | Canonical wire contract between the Assert job-scaler and your launcher endpoint. Read this first. |
+| [PROTOCOL.md](PROTOCOL.md) | Canonical wire contract between the Assert Security job-scaler and your launcher endpoint. Read this first. |
 | [CONFORMANCE.md](CONFORMANCE.md) | The checklist your implementation must pass. |
 | [conformance/](conformance/) | Conformance test scripts. Point them at your deployed launcher and they exercise every protocol assertion. |
 | [reference-lambda/](reference-lambda/) | Working TypeScript implementation deployed via AWS SAM. The Lambda is one option among many — see "Cloud neutrality" below. Spawn step is a clearly-marked stub you replace with your actual scheduler integration. |
@@ -36,11 +36,11 @@ The included examples cover the two most common shapes (AWS Lambda, Google Cloud
 
 ## Who this is for
 
-You're a customer of Assert Security running scans against targets that live inside your network — ServiceNow-internal hosts, customer-private SaaS apps, VPC-internal services, on-prem boxes — that the Assert AWS environment cannot reach.
+You're a customer of Assert Security running scans against targets that live inside your network — ServiceNow-internal hosts, customer-private SaaS apps, VPC-internal services, on-prem boxes — that the Assert Security AWS environment cannot reach.
 
-The Assert SAAS already spins workers up and down for public-target scans. This protocol lets you run the same job-node container yourself, scheduled by whatever runtime you prefer, with Assert driving the launch / terminate decisions based on real demand.
+The Assert Security SAAS already spins workers up and down for public-target scans. This protocol lets you run the same job-node container yourself, scheduled by whatever runtime you prefer, with Assert Security driving the launch / terminate decisions based on real demand.
 
-You implement one HTTPS endpoint that fulfills four operations. The Assert job-scaler calls your endpoint when scans queue up; your endpoint runs the Venari job-node container in your environment.
+You implement one HTTPS endpoint that fulfills four operations. The Assert Security job-scaler calls your endpoint when scans queue up; your endpoint runs the Venari job-node container in your environment.
 
 ---
 
@@ -57,8 +57,8 @@ You implement one HTTPS endpoint that fulfills four operations. The Assert job-s
 
 ## What the launcher does NOT need to know
 
-- The OAuth2 token endpoint. The worker (job-node container) talks to the Assert master directly; the launcher only spawns the worker.
-- The list of jobs queued at the master. The Assert side computes demand and tells you `desiredCount`.
+- The OAuth2 token endpoint. The worker (job-node container) talks to the Assert Security master directly; the launcher only spawns the worker.
+- The list of jobs queued at the master. The Assert Security side computes demand and tells you `desiredCount`.
 - Anything about scan configuration, target URLs, findings, or any product-level concept. You schedule containers; the worker container handles the scan.
 
 This separation is deliberate: the launcher boundary is "schedule a Venari worker process," nothing more. The worker carries its own auth and discovery once it's running.
@@ -77,7 +77,7 @@ You may fork, modify, and ship this code in your own private or public repos wit
 
 - **Status:** v1 draft. Wire format is stable enough to integrate against.
 - **Support:** Contact your Assert Security operator. The protocol itself is documented for self-service; integration-level help comes through your existing support channel.
-- **Contributions:** Pull requests welcome — protocol clarifications, additional spawner adapters, language ports. Substantive protocol changes are coordinated with the Assert side and bump the version per [PROTOCOL.md §2](PROTOCOL.md#2-versioning).
+- **Contributions:** Pull requests welcome — protocol clarifications, additional spawner adapters, language ports. Substantive protocol changes are coordinated with the Assert Security side and bump the version per [PROTOCOL.md §2](PROTOCOL.md#2-versioning).
 
 ---
 

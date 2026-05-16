@@ -4,8 +4,8 @@
 # Required env vars:
 #   GCP_PROJECT      — your GCP project ID
 #   GCP_REGION       — Cloud Run region, e.g. us-central1
-#   TENANT_SLUG      — your Assert tenant slug
-#   GROUP_NAME       — the Assert worker-group name
+#   TENANT_SLUG      — your Assert Security tenant slug
+#   GROUP_NAME       — the Assert Security worker-group name
 #
 # Optional env vars:
 #   IMAGE_REPO       — Artifact Registry repo path (default: asserts-launcher)
@@ -40,7 +40,7 @@ echo "==> Ensuring runtime service account exists: $RUNTIME_SA"
 if ! gcloud iam service-accounts describe "$RUNTIME_SA" --project="$GCP_PROJECT" >/dev/null 2>&1; then
     gcloud iam service-accounts create asserts-launcher-runtime \
         --project="$GCP_PROJECT" \
-        --display-name="Assert launcher runtime"
+        --display-name="Assert Security launcher runtime"
 fi
 
 echo "==> Granting required IAM roles"
@@ -79,5 +79,5 @@ URL=$(gcloud run services describe "$SERVICE_NAME" \
     --format='value(status.url)')
 
 echo
-echo "==> Done. Hand this URL to your Assert operator: $URL"
+echo "==> Done. Hand this URL to your Assert Security operator: $URL"
 echo "    Health probe:  curl -H 'Authorization: Bearer <token>' $URL/health"

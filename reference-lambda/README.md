@@ -12,8 +12,8 @@ The protocol is satisfied end-to-end before you touch any code, so you can verif
 
 ```
 ┌─────────────────┐        ┌───────────────────────┐        ┌────────────────────┐
-│ Assert job-     │ HTTPS  │ AWS API Gateway       │  Lambda│ Reference Lambda   │
-│ scaler          │───────▶│ (HTTP API, $default)  │───────▶│ (this code)        │
+│ Assert Security │ HTTPS  │ AWS API Gateway       │  Lambda│ Reference Lambda   │
+│ job-scaler      │───────▶│ (HTTP API, $default)  │───────▶│ (this code)        │
 └─────────────────┘        └───────────────────────┘        └────────┬───────────┘
                                                                      │
                                                   ┌──────────────────┼──────────────┐
@@ -32,7 +32,7 @@ The protocol is satisfied end-to-end before you touch any code, so you can verif
 - Node.js 20+
 - AWS CLI v2 configured for the account you want to deploy into
 - [AWS SAM CLI](https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/install-sam-cli.html) 1.100+
-- One secret in AWS Secrets Manager containing the bearer token your Assert operator issued you. SecretString = the raw token; nothing else.
+- One secret in AWS Secrets Manager containing the bearer token your Assert Security operator issued you. SecretString = the raw token; nothing else.
 
 ---
 
@@ -69,7 +69,7 @@ sam build
 sam deploy --guided
 ```
 
-The guided deploy prompts for the four parameters above and confirms the IAM changes (DynamoDB CRUD + Secrets Manager read on your token secret). The stack outputs `LauncherBaseUrl` — hand this URL to your Assert operator.
+The guided deploy prompts for the four parameters above and confirms the IAM changes (DynamoDB CRUD + Secrets Manager read on your token secret). The stack outputs `LauncherBaseUrl` — hand this URL to your Assert Security operator.
 
 For repeatable deploys, drop a `samconfig.toml` next to the template:
 

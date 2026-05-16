@@ -10,7 +10,7 @@ Canonical wire contract between the Assert Security job-scaler and a customer-im
 
 ## 1. Overview
 
-In the Assert Security SAAS deployment, a customer can host their own Venari job-node workers — for example, to scan targets reachable only from inside the customer's network. The Assert-side **job-scaler** decides when those workers should run; the customer-implemented **launcher** is the thing that actually starts and stops them.
+In the Assert Security SAAS deployment, a customer can host their own Venari job-node workers — for example, to scan targets reachable only from inside the customer's network. The Assert Security-side **job-scaler** decides when those workers should run; the customer-implemented **launcher** is the thing that actually starts and stops them.
 
 A launcher is any HTTPS endpoint that fulfills the four operations defined in §5. The protocol is intentionally **cloud-neutral** — it is HTTPS + JSON + Bearer auth, nothing more. Reasonable hosts include:
 
@@ -30,7 +30,7 @@ The launcher does not itself run Venari. It schedules the Venari job-node contai
 |---|---|---|
 | **Caller** | Assert Security job-scaler | Decides desired worker count per group; issues launch / terminate calls. |
 | **Launcher** | Customer | Receives calls; spawns and terminates worker container instances. |
-| **Worker** | Customer infra | The Venari job-node container; authenticates to the Assert master with OAuth2 client credentials supplied at launcher deploy time. |
+| **Worker** | Customer infra | The Venari job-node container; authenticates to the Assert Security master with OAuth2 client credentials supplied at launcher deploy time. |
 
 ### 1.2. Non-goals
 
@@ -55,7 +55,7 @@ A launcher implementing v1 MUST emit `X-Protocol-Version: 1`. A launcher that ha
 
 ### 2.1. Compatibility window
 
-The Assert side commits to supporting at least the previous major version for 12 months after a new major ships. During that window the job-scaler MAY downgrade its requests to match the launcher's advertised version. After the window the launcher MUST upgrade or the group is treated as `degraded` (§9.3).
+The Assert Security side commits to supporting at least the previous major version for 12 months after a new major ships. During that window the job-scaler MAY downgrade its requests to match the launcher's advertised version. After the window the launcher MUST upgrade or the group is treated as `degraded` (§9.3).
 
 ---
 
@@ -75,7 +75,7 @@ All requests carry a pre-shared bearer token in the `Authorization` header:
 Authorization: Bearer <pre-shared-token>
 ```
 
-The token is issued at tenant-provisioning time (see the operator playbook in the Assert private repo) and stored:
+The token is issued at tenant-provisioning time (see the operator playbook in the Assert Security private repo) and stored:
 
 - Caller side: in AWS SSM Parameter Store as a `SecureString`, fetched at job-scaler startup, cached in memory, never written to logs.
 - Launcher side: in the customer's secret store (AWS Secrets Manager, Kubernetes Secret, etc.), surfaced to the launcher process as an environment variable or fetched on cold start.
@@ -205,8 +205,8 @@ Request that `desiredCount` workers be running. The launcher decides the delta a
 |---|---|---|---|
 | `requestId` | UUID v4 string | yes | Caller-supplied. Used by the launcher for idempotency. Must match `^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$`. |
 | `desiredCount` | integer ≥ 0 | yes | Target running-or-starting worker count after this call. NOT a delta. If `desiredCount` ≤ current, the launcher MUST NOT spawn anything; it MAY also do nothing toward terminating excess workers (the caller drives termination via `DELETE`). |
-| `tenantSlug` | string | yes | Assert-side tenant identifier. Logged for audit; the launcher MAY reject a request whose `tenantSlug` does not match its configuration with `403`. |
-| `groupName` | string | yes | The Assert-side worker-group name this launcher serves. Same audit + reject semantics as `tenantSlug`. |
+| `tenantSlug` | string | yes | Assert Security-side tenant identifier. Logged for audit; the launcher MAY reject a request whose `tenantSlug` does not match its configuration with `403`. |
+| `groupName` | string | yes | The Assert Security-side worker-group name this launcher serves. Same audit + reject semantics as `tenantSlug`. |
 | `context` | object | no | Free-form caller diagnostic. The launcher SHOULD log it but MUST NOT depend on any field. |
 
 **Response 200 (or 202 if asynchronous):**
@@ -338,7 +338,7 @@ The caller does NOT retry on `4xx` other than `429`. `4xx`s indicate a configura
 
 ## 8. Worker credentials
 
-The Venari job-node container that the launcher spawns needs four environment variables to connect to the Assert master:
+The Venari job-node container that the launcher spawns needs four environment variables to connect to the Assert Security master:
 
 | Variable | Secret? | Source |
 |---|---|---|
@@ -404,7 +404,7 @@ A group exits degraded mode on the first successful `/health` with `status: "hea
 
 The launcher is responsible for the worker process's lifetime: spawn on launch, terminate on `DELETE`, optionally terminate on its own backend's signals (e.g. k8s pod eviction). The worker is otherwise expected to run until terminated.
 
-A worker that has registered with the Assert master and is in `running` state SHOULD continue until either the caller issues `DELETE` or the underlying infra removes it. Worker self-termination on idle is not part of v1 — the caller has authoritative knowledge of demand.
+A worker that has registered with the Assert Security master and is in `running` state SHOULD continue until either the caller issues `DELETE` or the underlying infra removes it. Worker self-termination on idle is not part of v1 — the caller has authoritative knowledge of demand.
 
 ---
 

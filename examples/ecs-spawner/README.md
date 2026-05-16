@@ -10,8 +10,8 @@ The launcher stays on AWS Lambda (the reference); only the spawn step changes.
 
 ```
 ┌─────────────────┐  HTTPS  ┌────────────────┐  ECS API  ┌────────────────┐
-│ Assert job-     │────────▶│ Lambda         │──────────▶│ ECS cluster    │
-│ scaler          │         │ (launcher)     │           │ (Fargate tasks)│
+│ Assert Security │────────▶│ Lambda         │──────────▶│ ECS cluster    │
+│ job-scaler      │         │ (launcher)     │           │ (Fargate tasks)│
 └─────────────────┘         └────────────────┘           └────────────────┘
                                                                   │
                                                                   ▼

@@ -5,10 +5,10 @@ Description: Reference implementation of the Assert Security job-node launcher p
 Parameters:
   TenantSlug:
     Type: String
-    Description: Assert tenant slug this launcher serves (e.g. acme-corp).
+    Description: Assert Security tenant slug this launcher serves (e.g. acme-corp).
   GroupName:
     Type: String
-    Description: Assert worker-group name this launcher serves (e.g. "ACME Internal").
+    Description: Assert Security worker-group name this launcher serves (e.g. "ACME Internal").
   BearerTokenSecretArn:
     Type: String
     Description: ARN of the Secrets Manager secret holding the launcher bearer token. SecretString = the raw token.
@@ -103,7 +103,7 @@ Resources:
 
 Outputs:
   LauncherBaseUrl:
-    Description: Hand this URL (with /v1 suffix) to your Assert operator.
+    Description: Hand this URL (with /v1 suffix) to your Assert Security operator.
     Value: !Sub https://${LauncherHttpApi}.execute-api.${AWS::Region}.amazonaws.com/v1
   IdempotencyTableName:
     Value: !Ref IdempotencyTable

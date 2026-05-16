@@ -91,7 +91,7 @@ metadata:
   namespace: asserts-launcher
   labels:
     app.kubernetes.io/part-of: asserts-jobnode-launcher
-  # The Assert job-scaler calls the launcher over HTTPS. The launcher container
+  # The Assert Security job-scaler calls the launcher over HTTPS. The launcher container
   # serves plain HTTP on 8080 — terminate TLS at the load balancer. On EKS,
   # attach an ACM certificate and expose 443 by uncommenting the annotations
   # and the https port below:
